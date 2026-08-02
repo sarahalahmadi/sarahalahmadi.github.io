@@ -6,7 +6,7 @@
 const SEVEN_CONFIG = {
 
   /* --- 1. Where new-request notifications go --- */
-  specialistEmail: "",          // e.g. "specialist@seven.sa"
+  specialistEmail: "sarhturk@gmail.com",          // e.g. "specialist@seven.sa"
 
   /* --- 2. EmailJS keys (see README for the 5-minute setup) ---
      Leave blank and the system still works, it just will not
