@@ -121,6 +121,10 @@
   .track-step.current .track-label{color:var(--navy);font-weight:800;}
   .track-meta{font-size:11px;color:var(--slate);font-weight:500;}
   .modal-actions{display:flex;gap:10px;padding:16px 24px 20px;flex-wrap:wrap;}
+  .filter-bar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:14px;}
+  .chip{padding:7px 14px;border:1.5px solid var(--line);border-radius:999px;background:#fff;color:var(--slate);font-weight:700;font-size:12px;cursor:pointer;font-family:inherit;}
+  .chip:hover{background:#FCFBF6;}
+  .chip.active{background:var(--navy);color:#F3F1EA;border-color:var(--navy);}
   .toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:var(--navy);color:#F3F1EA;padding:12px 20px;border-radius:10px;font-size:13px;font-weight:600;box-shadow:0 8px 24px rgba(0,0,0,.25);z-index:200;display:none;}
   .toast.show{display:block;}
   @media print{
@@ -221,13 +225,22 @@
   <div class="pane" id="pane-archive" style="display:none;">
     <div class="card">
       <div class="section-head">
-        <div class="title">Receipt Archive</div>
+        <div class="title">Full Archive</div>
         <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
           <span class="muted" id="archive-count"></span>
-          <button class="btn-ghost" id="btn-export-archive">Export Archive to Excel</button>
+          <button class="btn-ghost" id="btn-export-archive">Export to Excel</button>
         </div>
       </div>
-      <div class="note">Issued and rejected requests are kept here permanently. Click a request number to reopen and reprint its voucher.</div>
+      <div class="note">Every request ever submitted is kept here permanently, at every stage. Nothing is removed when a request is approved, rejected or issued. Click a request number to reopen and reprint its voucher.</div>
+      <div class="filter-bar">
+        <button class="chip active" data-filter="all">All</button>
+        <button class="chip" data-filter="pending_ops">Pending Ops</button>
+        <button class="chip" data-filter="pending_gm">Pending GM</button>
+        <button class="chip" data-filter="approved">Approved</button>
+        <button class="chip" data-filter="issued">Issued</button>
+        <button class="chip" data-filter="rejected">Rejected</button>
+        <input type="text" id="archive-search" placeholder="Search name, item, request no." style="flex:1;min-width:180px;padding:8px 12px;font-size:13px;">
+      </div>
       <div class="table-scroll"><div id="archive-table"></div></div>
     </div>
   </div>
@@ -266,7 +279,7 @@
   <div class="pane" id="pane-backup" style="display:none;">
     <div class="card">
       <div class="section-head"><div class="title">Excel Records</div></div>
-      <div class="note">Exports a workbook with three sheets: <b>All Requests</b>, <b>Active</b>, and <b>Archive</b>, including both approval columns.</div>
+      <div class="note">Exports a workbook with five sheets: <b>All Requests</b>, <b>In Progress</b>, <b>Approved</b>, <b>Rejected</b> and <b>Issued</b>. Every sheet carries the full record including both approval decisions, approver names, dates and notes.</div>
       <div style="display:flex;gap:10px;flex-wrap:wrap;">
         <button class="btn-primary" id="btn-export-all">Download Full Excel Record</button>
         <button class="btn-ghost" id="btn-export-active">Active Requests Only</button>
@@ -500,12 +513,36 @@
     el.innerHTML=tableHtml(rows,'');
   }
 
+  let archiveFilter='all';
+  let archiveQuery='';
+
+  function archiveList(){
+    let list=requestLog.slice();
+    if(archiveFilter!=='all') list=list.filter(r=>r.stage===archiveFilter);
+    if(archiveQuery){
+      const q=archiveQuery.toLowerCase();
+      list=list.filter(r=>
+        (r.reqNo||'').toLowerCase().indexOf(q)!==-1 ||
+        (r.recipient||'').toLowerCase().indexOf(q)!==-1 ||
+        (r.itemName||'').toLowerCase().indexOf(q)!==-1 ||
+        (r.itemCode||'').toLowerCase().indexOf(q)!==-1 ||
+        (r.email||'').toLowerCase().indexOf(q)!==-1 ||
+        (r.dept||'').toLowerCase().indexOf(q)!==-1
+      );
+    }
+    return list;
+  }
+
   function renderArchive(){
-    const list=requestLog.filter(r=>['issued','rejected'].indexOf(r.stage)!==-1);
-    document.getElementById('cnt-archive').textContent=list.length;
-    document.getElementById('archive-count').textContent=list.length+' archived';
+    const list=archiveList();
+    document.getElementById('cnt-archive').textContent=requestLog.length;
+    document.getElementById('archive-count').textContent =
+      (archiveFilter==='all' && !archiveQuery)
+        ? requestLog.length+' records on file'
+        : list.length+' of '+requestLog.length+' shown';
     const el=document.getElementById('archive-table');
-    if(!list.length){ el.innerHTML='<div class="empty">Nothing archived yet.</div>'; return; }
+    if(!requestLog.length){ el.innerHTML='<div class="empty">No requests on file yet.</div>'; return; }
+    if(!list.length){ el.innerHTML='<div class="empty">No records match this filter.</div>'; return; }
     const rows=list.slice().reverse().map(r=>{
       let acts='<button class="btn-ghost" style="padding:5px 11px;font-size:11.5px;" onclick="openVoucher(\''+r.id+'\')">Voucher</button>';
       if(currentRole==='specialist') acts+=' <button class="btn-remove" onclick="deleteRequest(\''+r.id+'\')">Remove</button>';
@@ -513,6 +550,19 @@
     }).join('');
     el.innerHTML=tableHtml(rows,'Receipt');
   }
+
+  document.querySelectorAll('.chip[data-filter]').forEach(c=>{
+    c.addEventListener('click', ()=>{
+      document.querySelectorAll('.chip[data-filter]').forEach(x=>x.classList.remove('active'));
+      c.classList.add('active');
+      archiveFilter=c.dataset.filter;
+      renderArchive();
+    });
+  });
+  document.getElementById('archive-search').addEventListener('input', e=>{
+    archiveQuery=e.target.value.trim();
+    renderArchive();
+  });
 
   /* ---------- approvals with email ---------- */
   function mailEmployee(r, subject, intro){
@@ -683,8 +733,10 @@
     if(!requestLog.length){ alert("No requests to export."); return; }
     downloadWorkbook([
       ["All Requests", requestLog],
-      ["Active", requestLog.filter(r=>['issued','rejected'].indexOf(r.stage)===-1)],
-      ["Archive", requestLog.filter(r=>['issued','rejected'].indexOf(r.stage)!==-1)]
+      ["In Progress", requestLog.filter(r=>['issued','rejected'].indexOf(r.stage)===-1)],
+      ["Approved",    requestLog.filter(r=>['approved','issued'].indexOf(r.stage)!==-1)],
+      ["Rejected",    requestLog.filter(r=>r.stage==='rejected')],
+      ["Issued",      requestLog.filter(r=>r.stage==='issued')]
     ], "SEVEN_Madinah_Material_Requests");
   });
   document.getElementById('btn-export-active').addEventListener('click', ()=>{
@@ -693,9 +745,11 @@
     downloadWorkbook([["Active", list]], "SEVEN_Madinah_Active_Requests");
   });
   document.getElementById('btn-export-archive').addEventListener('click', ()=>{
-    const list=requestLog.filter(r=>['issued','rejected'].indexOf(r.stage)!==-1);
-    if(!list.length){ alert("Archive is empty."); return; }
-    downloadWorkbook([["Archive", list]], "SEVEN_Madinah_Request_Archive");
+    if(!requestLog.length){ alert("No records to export."); return; }
+    const shown=archiveList();
+    const sheets=[["All Records", requestLog]];
+    if(shown.length!==requestLog.length) sheets.push(["Current View", shown]);
+    downloadWorkbook(sheets, "SEVEN_Madinah_Archive");
   });
 
   /* ---------- backup ---------- */
