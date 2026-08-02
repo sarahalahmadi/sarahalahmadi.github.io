@@ -1,118 +1,117 @@
-[README.md](https://github.com/user-attachments/files/30632997/README.md)
+[README.md](https://github.com/user-attachments/files/30633900/README.md)
 # SEVEN Madinah — Material Request System
 
-Two files, deployed together on GitHub Pages.
+## Files
 
-| File | Who uses it | Password? |
+| File | Purpose | Password |
 |---|---|---|
-| `index.html` | Any employee submitting a request | No |
-| `log.html` | Specialist, Head of Operations, General Manager | Yes — one password per role |
+| `config.js` | All settings. The only file you edit. | - |
+| `index.html` | Employee submits a request | No |
+| `track.html` | Employee checks their own request status | No |
+| `log.html` | Specialist, Head of Operations, General Manager | Yes |
+
+Upload all four to the root of your repository.
 
 ---
 
-## 1. Change the passwords (do this first)
+## Setup, step 1: passwords and email
 
-Open `log.html`, find this block near the bottom (search for `const ROLES`):
+Open `config.js`. Everything you need is at the top:
 
 ```javascript
-const ROLES = {
+specialistEmail: "",        // the inventory specialist's address
+
+emailjs: { publicKey:"", serviceId:"", templateId:"" },
+
+roles: {
   specialist: { label:"Senior Inventory Specialist", password:"specialist123" },
   ops:        { label:"Head of Operations",          password:"ops123" },
   gm:         { label:"General Manager",             password:"gm123" }
-};
+}
 ```
 
-Replace the three passwords. Give each person only their own.
+Change the three passwords. Put the specialist's email address in `specialistEmail`.
 
 ---
 
-## 2. Set the notification email
+## Setup, step 2: turn on email notifications
 
-Open `index.html`, search for `const CONFIG`:
+A website hosted on GitHub Pages cannot send email by itself. EmailJS does the sending. It is free for 200 emails a month and takes about five minutes.
 
-```javascript
-const CONFIG = {
-  specialistEmail: "",              // put the specialist's email here
-  emailjs: { publicKey:"", serviceId:"", templateId:"" }
-};
-```
+1. Go to emailjs.com and create an account.
+2. **Email Services** > Add New Service > connect the mailbox the notifications will be sent from. Copy the **Service ID**.
+3. **Email Templates** > Create New Template. Set it up exactly like this:
+   - To Email: `{{to_email}}`
+   - Subject: `{{subject}}`
+   - Content: `{{message}}`
 
-**Option A — manual (works immediately).** Fill in `specialistEmail` only. After submitting, the employee sees an "Email the Specialist" button that opens their mail app with the full request details pre-written. They just press send.
+   Save it and copy the **Template ID**.
+4. **Account** > copy your **Public Key**.
+5. Paste all three into `config.js`.
 
-**Option B — automatic.** A static site cannot send email on its own, so this needs a free third-party service:
+That single template handles every notification. Do not add other fields to it.
 
-1. Sign up at emailjs.com (free tier: 200 emails/month)
-2. Connect your email account, create a template
-3. Copy your Public Key, Service ID and Template ID into the `emailjs` block
+### What gets sent, and to whom
 
-Template variables available: `to_email`, `request_no`, `request_date`, `recipient`, `department`, `employee_email`, `item_name`, `item_code`, `qty`, `reason`.
+| Event | Email goes to |
+|---|---|
+| Employee submits a request | Inventory specialist |
+| Head of Operations approves | The employee |
+| Head of Operations rejects | The employee, with the reason |
+| General Manager approves | The employee, and the specialist |
+| General Manager rejects | The employee, with the reason |
+| Specialist marks it issued | The employee |
 
-Once filled in, the specialist is emailed automatically on every submission.
+The employee's email is only collected so these notifications can reach them.
+
+If you leave the EmailJS fields blank, everything else still works. Nothing is emailed, and the request is still saved and visible in the portal.
 
 ---
 
-## 3. Load your Excel data
+## Setup, step 3: load your data
 
-Sign in as Specialist, go to **Reference Data**, upload your `.xlsx`. It reads the القوائم المرجعية sheet and matches columns by header name, so it keeps working when you add rows later. Uploading never touches saved requests.
+Sign in to `log.html` as Specialist, go to **Reference Data**, upload your Excel file. It reads the reference sheet and matches columns by header name, in Arabic or English. Uploading never affects saved requests.
 
 ---
 
-## The approval flow
+## Approval flow
 
 ```
 Employee submits
-   -> Pending Head of Operations   (Ops approves + sets approved qty, or rejects)
-   -> Pending General Manager      (GM approves or rejects)
-   -> Approved, awaiting issue     (Specialist marks issued + voucher no.)
-   -> Issued  ->  moves to Archive
+   -> Pending Head of Operations   (approves and sets the approved quantity, or rejects)
+   -> Pending General Manager      (approves or rejects)
+   -> Approved, awaiting issue     (specialist marks issued, adds voucher number)
+   -> Issued, moves to Archive
 ```
 
-Rejections at any stage go straight to Archive with the reason recorded.
-Marking a request issued automatically deducts the approved quantity from that item's stock balance.
+Marking a request issued deducts the approved quantity from that item's stock balance.
 
-Every request keeps its full voucher permanently. Open it from any table by clicking the request number, then print or save as PDF.
-
----
-
-## Excel records and backups
-
-**Export & Backup** tab (Specialist only):
-
-- **Download Full Excel Record** — workbook with three sheets: All Requests, Active, Archive. Bilingual headers matching your original file, including both approval columns, approver names, dates and notes.
-- **Active Requests Only** / **Export Archive to Excel** — narrower exports.
-- **Download Backup File** — a `.json` containing every request, every approval and your reference lists.
-- **Restore from Backup** — merges a backup back in. It only adds requests that aren't already there, so restoring is safe and never overwrites.
-
-**Download a backup weekly, and always before clearing browser data or changing computers.**
+Rejections go straight to the archive with the reason recorded.
 
 ---
 
-## Important: how data is stored
+## Records and backups
 
-Everything is saved in the browser's own storage on the device where it was entered. This means:
+In the **Export and Backup** tab, specialist only:
 
-- Data survives closing the tab, restarting the browser, and site updates
-- Works offline, nothing leaves the device, no monthly cost
-- **Data does not travel between devices.** A request submitted on an employee's phone will not appear on the specialist's laptop.
+- **Download Full Excel Record** gives a workbook with three sheets: All Requests, Active, Archive. Includes both approval columns, approver names, dates and notes.
+- **Download Backup File** saves a `.json` with every request, approval and reference list.
+- **Restore from Backup** merges a backup back in without overwriting anything.
 
-For a single shared warehouse computer this works well. If requests will be submitted from many different devices, the system needs a real backend database — see below.
-
-### Moving to shared central storage
-
-Three options, cheapest first:
-
-1. **Google Sheets + Apps Script** — free. The form posts each request into a Google Sheet, which also sends the notification email. Everyone sees the same live data, and you get the Excel record automatically.
-2. **Supabase or Firebase** — free tier, a real database, proper user logins, instant sync.
-3. **Microsoft Power Apps + SharePoint list** — fits your existing SEVEN SharePoint setup and Microsoft accounts, with approvals built into Power Automate.
-
-Option 3 is likely the best long-term fit given the SharePoint inventory file you already use.
+Download a backup weekly, and always before clearing browser data or changing computers.
 
 ---
 
-## Deploying
+## How data is stored
 
-Put `index.html` and `log.html` in the root of your `username.github.io` repository. Settings, then Pages, then deploy from `main` branch. Live at `https://username.github.io` within a minute or two.
+Everything is stored in the browser on the device where it was entered.
+
+- Survives closing the tab, restarting the browser, and site updates
+- Works offline, costs nothing
+- **Does not move between devices.** A request submitted on a phone will not appear on the specialist's laptop.
+
+This works well if the warehouse uses one shared computer. If requests come from many devices, the system needs a real backend. Given the SharePoint file already in use, Power Apps with a SharePoint list is the natural fit, and it has approvals and notifications built in.
 
 ---
 
-*SEVEN Madinah Complex · Warehouse Operations*
+*SEVEN Madinah Complex, Warehouse Operations*
