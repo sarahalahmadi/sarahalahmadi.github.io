@@ -1,103 +1,118 @@
-# SEVEN Madinah Material Request Web App
+[README.md](https://github.com/user-attachments/files/30632997/README.md)
+# SEVEN Madinah — Material Request System
 
-A production-ready material request tracking system for warehouse operations, deployed on GitHub Pages.
+Two files, deployed together on GitHub Pages.
 
-## Files
-
-- **index.html** — Public request submission form (employees submit material requests here)
-- **log.html** — Password-protected saved requests log and reference data manager (senior inventory specialist only)
-
-## Setup Instructions
-
-### 1. Deploy to GitHub Pages
-
-1. Create a new repository named `username.github.io` (replace `username` with your GitHub username, all lowercase)
-2. Upload both `index.html` and `log.html` to the root of that repository
-3. Go to **Settings → Pages** and make sure "Build and deployment" is set to deploy from the `main` branch
-4. Your site will be live at `https://username.github.io` in a minute or two
-
-### 2. Change the Admin Password
-
-**IMPORTANT:** The default password is `specialist123`. You **must** change this before going live.
-
-In `log.html`, find this line (around line 450 in the JavaScript):
-```javascript
-const SPECIALIST_PASSWORD = "specialist123"; // Change this to your own password
-```
-
-Replace `specialist123` with your own secure password.
-
-### 3. Load Your Employee & Item Lists
-
-1. Go to `https://username.github.io/log.html`
-2. Enter your password
-3. Under "Reference Data", click "Choose File" and upload your Excel workbook
-4. The app reads from the "القوائم المرجعية" (reference) sheet and auto-detects columns like:
-   - اسم الموظف (Employee Name)
-   - الرقم الوظيفي (Employee ID)
-   - القسم (Department)
-   - اسم الصنف (Item Name)
-   - كود الصنف (Item Code)
-   - الرصيد المتاح (Available Balance)
-   - الجهات المستلمة (Recipient Entities)
-
-If your Excel sheet has different headers, you can also paste tab-separated data manually in the textboxes below.
-
-## How It Works
-
-### Request Form (index.html)
-- **Public, no password needed**
-- Employees select their name or department, choose an item, enter quantity and reason
-- Submits a request and prints/saves a digital voucher
-- All submissions are saved automatically to the browser's local storage
-
-### Saved Requests Log (log.html)
-- **Password protected** — only senior inventory specialist can access
-- View all submitted requests in a table
-- Delete individual requests or clear the entire log
-- Upload updated Excel files to refresh employee/item lists
-- Manually edit reference data by pasting from Excel
-
-## Data Storage
-
-All data is stored in your **browser's localStorage**, which persists even after closing the page. This means:
-- ✅ Requests are saved locally on the device/browser
-- ✅ Survives page refreshes, browser restarts, and updates
-- ✅ Works completely offline
-- ⚠️ Data is specific to this browser (won't sync across devices)
-
-If you need **central cloud storage** (so requests from multiple devices appear in one place), contact us for a Firebase/Supabase integration.
-
-## Updating Employee & Item Lists
-
-Two options:
-
-**Option 1: Upload Excel file** (recommended)
-1. Update your Excel file with new employees or items
-2. Go to Saved Requests → Reference Data → Upload your Excel file
-3. Changes take effect immediately
-
-**Option 2: Paste manually**
-1. Copy-paste from Excel into the textboxes (tab-separated)
-2. Click "Save Reference Data"
-
-## Printing/Downloading Requests
-
-After submitting a request, employees can:
-- Click "Print / Save as PDF" to create a digital copy
-- Use browser's print dialog (Ctrl+P or Cmd+P) to save as PDF
-
-## Support
-
-If you need to:
-- Add more fields to requests (cost center, priority level, etc.)
-- Integrate with a real database (so requests sync across devices)
-- Change the design or layout
-- Add SMS/email notifications when requests are submitted
-
-…let me know and I can extend the app.
+| File | Who uses it | Password? |
+|---|---|---|
+| `index.html` | Any employee submitting a request | No |
+| `log.html` | Specialist, Head of Operations, General Manager | Yes — one password per role |
 
 ---
 
-**Built for SEVEN Madinah Complex Warehouse Operations**  
-Last updated: July 2026
+## 1. Change the passwords (do this first)
+
+Open `log.html`, find this block near the bottom (search for `const ROLES`):
+
+```javascript
+const ROLES = {
+  specialist: { label:"Senior Inventory Specialist", password:"specialist123" },
+  ops:        { label:"Head of Operations",          password:"ops123" },
+  gm:         { label:"General Manager",             password:"gm123" }
+};
+```
+
+Replace the three passwords. Give each person only their own.
+
+---
+
+## 2. Set the notification email
+
+Open `index.html`, search for `const CONFIG`:
+
+```javascript
+const CONFIG = {
+  specialistEmail: "",              // put the specialist's email here
+  emailjs: { publicKey:"", serviceId:"", templateId:"" }
+};
+```
+
+**Option A — manual (works immediately).** Fill in `specialistEmail` only. After submitting, the employee sees an "Email the Specialist" button that opens their mail app with the full request details pre-written. They just press send.
+
+**Option B — automatic.** A static site cannot send email on its own, so this needs a free third-party service:
+
+1. Sign up at emailjs.com (free tier: 200 emails/month)
+2. Connect your email account, create a template
+3. Copy your Public Key, Service ID and Template ID into the `emailjs` block
+
+Template variables available: `to_email`, `request_no`, `request_date`, `recipient`, `department`, `employee_email`, `item_name`, `item_code`, `qty`, `reason`.
+
+Once filled in, the specialist is emailed automatically on every submission.
+
+---
+
+## 3. Load your Excel data
+
+Sign in as Specialist, go to **Reference Data**, upload your `.xlsx`. It reads the القوائم المرجعية sheet and matches columns by header name, so it keeps working when you add rows later. Uploading never touches saved requests.
+
+---
+
+## The approval flow
+
+```
+Employee submits
+   -> Pending Head of Operations   (Ops approves + sets approved qty, or rejects)
+   -> Pending General Manager      (GM approves or rejects)
+   -> Approved, awaiting issue     (Specialist marks issued + voucher no.)
+   -> Issued  ->  moves to Archive
+```
+
+Rejections at any stage go straight to Archive with the reason recorded.
+Marking a request issued automatically deducts the approved quantity from that item's stock balance.
+
+Every request keeps its full voucher permanently. Open it from any table by clicking the request number, then print or save as PDF.
+
+---
+
+## Excel records and backups
+
+**Export & Backup** tab (Specialist only):
+
+- **Download Full Excel Record** — workbook with three sheets: All Requests, Active, Archive. Bilingual headers matching your original file, including both approval columns, approver names, dates and notes.
+- **Active Requests Only** / **Export Archive to Excel** — narrower exports.
+- **Download Backup File** — a `.json` containing every request, every approval and your reference lists.
+- **Restore from Backup** — merges a backup back in. It only adds requests that aren't already there, so restoring is safe and never overwrites.
+
+**Download a backup weekly, and always before clearing browser data or changing computers.**
+
+---
+
+## Important: how data is stored
+
+Everything is saved in the browser's own storage on the device where it was entered. This means:
+
+- Data survives closing the tab, restarting the browser, and site updates
+- Works offline, nothing leaves the device, no monthly cost
+- **Data does not travel between devices.** A request submitted on an employee's phone will not appear on the specialist's laptop.
+
+For a single shared warehouse computer this works well. If requests will be submitted from many different devices, the system needs a real backend database — see below.
+
+### Moving to shared central storage
+
+Three options, cheapest first:
+
+1. **Google Sheets + Apps Script** — free. The form posts each request into a Google Sheet, which also sends the notification email. Everyone sees the same live data, and you get the Excel record automatically.
+2. **Supabase or Firebase** — free tier, a real database, proper user logins, instant sync.
+3. **Microsoft Power Apps + SharePoint list** — fits your existing SEVEN SharePoint setup and Microsoft accounts, with approvals built into Power Automate.
+
+Option 3 is likely the best long-term fit given the SharePoint inventory file you already use.
+
+---
+
+## Deploying
+
+Put `index.html` and `log.html` in the root of your `username.github.io` repository. Settings, then Pages, then deploy from `main` branch. Live at `https://username.github.io` within a minute or two.
+
+---
+
+*SEVEN Madinah Complex · Warehouse Operations*
