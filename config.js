@@ -6,15 +6,13 @@
 const SEVEN_CONFIG = {
 
   /* --- 1. Where new-request notifications go --- */
-  specialistEmail: "sarhturk@gmail.com",          // e.g. "specialist@seven.sa"
+  specialistEmail: "murad.alzaher@seven.sa",
 
-  /* --- 2. EmailJS keys (see README for the 5-minute setup) ---
-     Leave blank and the system still works, it just will not
-     send email automatically.                                  */
+  /* --- 2. EmailJS keys --- */
   emailjs: {
-    publicKey:  "",
-    serviceId:  "",
-    templateId: ""
+    publicKey:  "kzUtolJtp0KXWUjfo",
+    serviceId:  "service_fkm16vs",
+    templateId: "template_lz5a18x"
   },
 
   /* --- 3. Staff passwords --- */
@@ -30,7 +28,7 @@ const SEVEN_CONFIG = {
    Mail sender. Do not edit below this line.
    ============================================================ */
 function sevenSendMail(toEmail, subject, message){
-  const cfg = SEVEN_CONFIG.emailjs;
+  var cfg = SEVEN_CONFIG.emailjs;
   if(!toEmail) return Promise.resolve(false);
   if(!cfg.publicKey || !cfg.serviceId || !cfg.templateId) return Promise.resolve(false);
   if(typeof emailjs === "undefined") return Promise.resolve(false);
@@ -40,7 +38,7 @@ function sevenSendMail(toEmail, subject, message){
       to_email: toEmail,
       subject: subject,
       message: message
-    }).then(()=>true).catch(err=>{ console.warn("Email failed:", err); return false; });
+    }).then(function(){ return true; }).catch(function(err){ console.warn("Email failed:", err); return false; });
   }catch(err){
     console.warn("Email failed:", err);
     return Promise.resolve(false);
@@ -48,7 +46,7 @@ function sevenSendMail(toEmail, subject, message){
 }
 
 function sevenRequestSummary(r){
-  const lines = [
+  var lines = [
     "Request No: " + r.reqNo,
     "Date: " + r.dateDisplay,
     "Recipient: " + r.recipient + (r.dept ? " (" + r.dept + ")" : ""),
