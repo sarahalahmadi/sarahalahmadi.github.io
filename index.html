@@ -44,6 +44,20 @@
   .segmented button{flex:1;padding:11px;border:none;background:#fff;cursor:pointer;font-family:inherit;font-size:13.5px;font-weight:700;color:var(--slate);border-inline-start:1.5px solid var(--line);}
   .segmented button:first-child{border-inline-start:none;}
   .segmented button.active{background:var(--navy);color:#F3F1EA;}
+  .combo{position:relative;}
+  .combo input{width:100%;padding:11px 13px;border:1.5px solid var(--line);border-radius:9px;background:#fff;font-size:14.5px;font-family:inherit;color:var(--ink);}
+  .combo input:focus{outline:none;border-color:var(--teal);box-shadow:0 0 0 3px rgba(21,140,130,.15);}
+  .combo-list{position:absolute;top:calc(100% + 4px);left:0;right:0;background:#fff;border:1.5px solid var(--line);border-radius:10px;box-shadow:0 10px 28px rgba(20,35,68,.16);max-height:270px;overflow-y:auto;z-index:50;display:none;}
+  .combo-list.show{display:block;}
+  .combo-opt{padding:10px 13px;cursor:pointer;font-size:14px;border-bottom:1px solid #F2EFE7;}
+  .combo-opt:last-child{border-bottom:none;}
+  .combo-opt:hover,.combo-opt.active{background:#F4F1E9;}
+  .combo-opt .sub{display:block;font-size:11.5px;color:var(--slate);margin-top:2px;}
+  .combo-opt mark{background:#FBEBC4;color:inherit;padding:0 1px;border-radius:2px;}
+  .combo-empty{padding:14px 13px;font-size:13px;color:var(--slate);text-align:center;}
+  .combo-more{padding:8px 13px;font-size:11.5px;color:var(--slate);text-align:center;background:#FCFBF6;border-top:1px solid #F2EFE7;}
+  .combo-clear{position:absolute;right:10px;top:50%;transform:translateY(-50%);border:none;background:transparent;color:var(--slate);cursor:pointer;font-size:16px;line-height:1;padding:4px;display:none;}
+  .combo-clear.show{display:block;}
   .stock-hint{font-size:12px;color:var(--slate);margin-top:6px;font-family:'JetBrains Mono',monospace;}
   .stock-hint.low{color:var(--red);font-weight:700;}
   .err{color:var(--red);font-size:12.5px;margin-top:6px;display:none;font-weight:600;}
@@ -116,7 +130,11 @@
 
     <div id="block-emp" class="field">
       <label>Employee Name</label>
-      <select id="sel-emp"></select>
+      <div class="combo">
+        <input type="text" id="sel-emp" placeholder="Start typing a name" autocomplete="off">
+        <button type="button" class="combo-clear" id="clr-emp">&times;</button>
+        <div class="combo-list" id="list-emp"></div>
+      </div>
       <div class="row2" style="margin-top:14px;">
         <div>
           <label>Employee ID</label>
@@ -131,7 +149,11 @@
 
     <div id="block-ent" class="field" style="display:none;">
       <label>Recipient Entity</label>
-      <select id="sel-ent"></select>
+      <div class="combo">
+        <input type="text" id="sel-ent" placeholder="Start typing an entity" autocomplete="off">
+        <button type="button" class="combo-clear" id="clr-ent">&times;</button>
+        <div class="combo-list" id="list-ent"></div>
+      </div>
     </div>
 
     <div class="field">
@@ -142,7 +164,11 @@
 
     <div class="field">
       <label>Item</label>
-      <select id="sel-item"></select>
+      <div class="combo">
+        <input type="text" id="sel-item" placeholder="Start typing an item name or code" autocomplete="off">
+        <button type="button" class="combo-clear" id="clr-item">&times;</button>
+        <div class="combo-list" id="list-item"></div>
+      </div>
       <div class="stock-hint" id="stock-hint"></div>
     </div>
 
@@ -206,43 +232,10 @@
 
 <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
 <script src="config.js"></script>
+<script src="data.js"></script>
 <script>
 (function(){
-  const SEED_EMPLOYEES = [
-    {name:"Ahmed Alsaedi", id:"10008689", dept:"Operations"},
-    {name:"Ghaydaa Yasin", id:"10009451", dept:"Operations"},
-    {name:"Murad Al Zaher", id:"10009199", dept:"Operations"},
-    {name:"Mehmood Khan", id:"10006474", dept:"Operations"},
-    {name:"Waleed Eltawansy", id:"10008214", dept:"Operations"},
-    {name:"Vicnesvaran Rajasekharan", id:"10008492", dept:"Operations"},
-    {name:"Hisham Oghly", id:"10008405", dept:"Operations"},
-    {name:"Muwafaq Akram", id:"10008630", dept:"Operations"},
-    {name:"Fahad Saqqa", id:"10008566", dept:"Operations"},
-    {name:"Fahad Farea", id:"10008567", dept:"Operations"},
-    {name:"Faisal Al Harthi", id:"10008280", dept:"Operations"},
-    {name:"Anwar Alamer", id:"10001333", dept:"Operations"},
-    {name:"Reaan Zarea", id:"10009009", dept:"Operations"}
-  ];
-  const SEED_ITEMS = [
-    {name:"Tyvek Wristband QR+Serial 1-Time Use", code:"1200000659", available:395000},
-    {name:"Super General 3-Tap Water Dispenser", code:"1800000167", available:6},
-    {name:"Screen", code:"ITM-005", available:166},
-    {name:"Laptop", code:"ITM-004", available:140},
-    {name:"Safety Helmet", code:"ITM-001", available:117},
-    {name:"Vest", code:"ITM-002", available:117},
-    {name:"Shoes", code:"ITM-003", available:121},
-    {name:"Headphone", code:"ITM-006", available:158},
-    {name:"Mouse", code:"ITM-007", available:159},
-    {name:"Keyboard", code:"ITM-008", available:160},
-    {name:"Docking Station", code:"ITM-009", available:177},
-    {name:"Cam", code:"ITM-010", available:177},
-    {name:"Locker", code:"ITM-011", available:146},
-    {name:"Welcome Kit", code:"ITM-012", available:138},
-    {name:"PLATFORM TROLLEY-150KG", code:"1800000646", available:6}
-  ];
-  const SEED_ENTITIES = ["Workshop","Ahmed office","management 1","management 2","Male break room","Female break room"];
-
-  let refData = { employees:SEED_EMPLOYEES, items:SEED_ITEMS, entities:SEED_ENTITIES };
+  let refData = { employees:SEVEN_DATA.employees.slice(), items:SEVEN_DATA.items.slice(), entities:SEVEN_DATA.entities.slice() };
   let requestLog = [];
   let issueType = "emp";
   let lastRecord = null;
@@ -257,43 +250,164 @@
     catch(e){ alert("Could not save the request. Browser storage may be full or blocked."); }
   }
 
-  function fillSelect(sel, options, placeholder){
-    sel.innerHTML = '<option value="">'+placeholder+'</option>' +
-      options.map((o,i)=>'<option value="'+i+'">'+o+'</option>').join('');
-  }
-  function renderAll(){
-    fillSelect(document.getElementById('sel-emp'), refData.employees.map(e=>e.name), "Select employee");
-    fillSelect(document.getElementById('sel-ent'), refData.entities, "Select entity");
-    fillSelect(document.getElementById('sel-item'), refData.items.map(i=>i.name+"  (available: "+i.available+")"), "Select item");
+  /* ---------------- searchable combo box ---------------- */
+  function makeCombo(opts){
+    var input   = document.getElementById(opts.inputId);
+    var listEl  = document.getElementById(opts.listId);
+    var clearEl = document.getElementById(opts.clearId);
+    var state   = { selected:null, active:-1, results:[] };
+    var MAX = 50;
+
+    function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g,function(c){
+      return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); }
+    function hl(text, q){
+      if(!q) return esc(text);
+      var i = text.toLowerCase().indexOf(q.toLowerCase());
+      if(i === -1) return esc(text);
+      return esc(text.slice(0,i))+'<mark>'+esc(text.slice(i,i+q.length))+'</mark>'+esc(text.slice(i+q.length));
+    }
+
+    function search(q){
+      var all = opts.getData();
+      if(!q) return all.slice(0, MAX);
+      var ql = q.toLowerCase();
+      var starts = [], contains = [];
+      for(var i=0;i<all.length;i++){
+        var hay = opts.searchText(all[i]).toLowerCase();
+        var pos = hay.indexOf(ql);
+        if(pos === 0) starts.push(all[i]);
+        else if(pos > 0) contains.push(all[i]);
+        if(starts.length >= MAX) break;
+      }
+      return starts.concat(contains).slice(0, MAX);
+    }
+
+    function render(q){
+      var all = opts.getData();
+      state.results = search(q);
+      state.active = -1;
+      if(!state.results.length){
+        listEl.innerHTML = '<div class="combo-empty">No match found</div>';
+      } else {
+        var html = state.results.map(function(item, i){
+          return '<div class="combo-opt" data-i="'+i+'">'+opts.renderOpt(item, q, hl)+'</div>';
+        }).join('');
+        var shown = state.results.length;
+        var total = q ? null : all.length;
+        if(total && total > shown) html += '<div class="combo-more">Showing '+shown+' of '+total+'. Keep typing to narrow.</div>';
+        else if(shown >= MAX) html += '<div class="combo-more">Showing first '+MAX+' matches. Keep typing to narrow.</div>';
+        listEl.innerHTML = html;
+      }
+      listEl.classList.add('show');
+    }
+    function close(){ listEl.classList.remove('show'); state.active = -1; }
+
+    function pick(i){
+      var item = state.results[i];
+      if(!item) return;
+      state.selected = item;
+      input.value = opts.label(item);
+      clearEl.classList.add('show');
+      close();
+      if(opts.onSelect) opts.onSelect(item);
+    }
+    function clear(){
+      state.selected = null;
+      input.value = '';
+      clearEl.classList.remove('show');
+      close();
+      if(opts.onClear) opts.onClear();
+    }
+
+    input.addEventListener('focus', function(){ render(state.selected ? '' : input.value.trim()); });
+    input.addEventListener('input', function(){
+      state.selected = null;
+      clearEl.classList.toggle('show', input.value.length > 0);
+      if(opts.onClear) opts.onClear();
+      render(input.value.trim());
+    });
+    input.addEventListener('keydown', function(e){
+      if(!listEl.classList.contains('show')) return;
+      var optsEls = listEl.querySelectorAll('.combo-opt');
+      if(e.key === 'ArrowDown' || e.key === 'ArrowUp'){
+        e.preventDefault();
+        if(!optsEls.length) return;
+        state.active += (e.key === 'ArrowDown' ? 1 : -1);
+        if(state.active < 0) state.active = optsEls.length - 1;
+        if(state.active >= optsEls.length) state.active = 0;
+        for(var k=0;k<optsEls.length;k++) optsEls[k].classList.toggle('active', k === state.active);
+        optsEls[state.active].scrollIntoView({block:'nearest'});
+      } else if(e.key === 'Enter'){
+        e.preventDefault();
+        pick(state.active >= 0 ? state.active : 0);
+      } else if(e.key === 'Escape'){ close(); }
+    });
+    listEl.addEventListener('mousedown', function(e){
+      var el = e.target.closest('.combo-opt');
+      if(el) { e.preventDefault(); pick(parseInt(el.dataset.i,10)); }
+    });
+    clearEl.addEventListener('click', clear);
+    document.addEventListener('click', function(e){
+      if(!input.parentNode.contains(e.target)) close();
+    });
+
+    return {
+      get: function(){ return state.selected; },
+      reset: clear
+    };
   }
 
-  const selEmp=document.getElementById('sel-emp'), selEnt=document.getElementById('sel-ent'),
-        selItem=document.getElementById('sel-item'), outEmpId=document.getElementById('out-empid'),
-        outDept=document.getElementById('out-dept'), outCode=document.getElementById('out-code'),
-        inQty=document.getElementById('in-qty'), inEmail=document.getElementById('in-email'),
-        stockHint=document.getElementById('stock-hint'), errQty=document.getElementById('err-qty'),
+  var comboEmp, comboEnt, comboItem;
+
+  function renderAll(){
+    comboEmp = makeCombo({
+      inputId:'sel-emp', listId:'list-emp', clearId:'clr-emp',
+      getData: function(){ return refData.employees; },
+      searchText: function(e){ return e.name + ' ' + e.id; },
+      label: function(e){ return e.name; },
+      renderOpt: function(e,q,hl){ return hl(e.name,q) + '<span class="sub">ID ' + e.id + (e.dept ? ' &middot; ' + e.dept : '') + '</span>'; },
+      onSelect: function(e){ outEmpId.value = e.id; outDept.value = e.dept; },
+      onClear:  function(){ outEmpId.value = ''; outDept.value = ''; }
+    });
+    comboEnt = makeCombo({
+      inputId:'sel-ent', listId:'list-ent', clearId:'clr-ent',
+      getData: function(){ return refData.entities; },
+      searchText: function(x){ return x; },
+      label: function(x){ return x; },
+      renderOpt: function(x,q,hl){ return hl(x,q); }
+    });
+    comboItem = makeCombo({
+      inputId:'sel-item', listId:'list-item', clearId:'clr-item',
+      getData: function(){ return refData.items; },
+      searchText: function(i){ return i.name + ' ' + i.code; },
+      label: function(i){ return i.name; },
+      renderOpt: function(i,q,hl){
+        return hl(i.name,q) + '<span class="sub">' + i.code + ' &middot; available: ' + i.available + '</span>';
+      },
+      onSelect: function(i){
+        outCode.value = i.code;
+        stockHint.textContent = 'Available: ' + i.available;
+        stockHint.classList.toggle('low', i.available < 10);
+        validateQty();
+      },
+      onClear: function(){ outCode.value=''; stockHint.textContent=''; errQty.classList.remove('show'); }
+    });
+  }
+
+  const outEmpId=document.getElementById('out-empid'),
+        outDept=document.getElementById('out-dept'),
+        outCode=document.getElementById('out-code'),
+        inQty=document.getElementById('in-qty'),
+        inEmail=document.getElementById('in-email'),
+        stockHint=document.getElementById('stock-hint'),
+        errQty=document.getElementById('err-qty'),
         errEmail=document.getElementById('err-email');
 
-  selEmp.addEventListener('change', ()=>{
-    const i=selEmp.value;
-    if(i===""){ outEmpId.value=""; outDept.value=""; return; }
-    outEmpId.value=refData.employees[i].id;
-    outDept.value=refData.employees[i].dept;
-  });
-  selItem.addEventListener('change', ()=>{
-    const i=selItem.value;
-    if(i===""){ outCode.value=""; stockHint.textContent=""; return; }
-    const it=refData.items[i];
-    outCode.value=it.code;
-    stockHint.textContent="Available: "+it.available;
-    stockHint.classList.toggle('low', it.available<10);
-    validateQty();
-  });
   inQty.addEventListener('input', validateQty);
   function validateQty(){
-    const i=selItem.value;
-    if(i===""){ errQty.classList.remove('show'); return true; }
-    if(parseInt(inQty.value||"0",10) > refData.items[i].available){ errQty.classList.add('show'); return false; }
+    var it = comboItem && comboItem.get();
+    if(!it){ errQty.classList.remove('show'); return true; }
+    if(parseInt(inQty.value||"0",10) > it.available){ errQty.classList.add('show'); return false; }
     errQty.classList.remove('show'); return true;
   }
   const validEmail = v => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v);
@@ -317,21 +431,20 @@
   const uid = ()=> 'r'+Date.now().toString(36)+Math.random().toString(36).slice(2,7);
 
   document.getElementById('btn-submit').addEventListener('click', ()=>{
-    if(issueType==='emp' && selEmp.value===""){ alert("Select an employee."); return; }
-    if(issueType==='ent' && selEnt.value===""){ alert("Select a recipient entity."); return; }
+    const selectedEmp = comboEmp.get(), selectedEnt = comboEnt.get(), it = comboItem.get();
+    if(issueType==='emp' && !selectedEmp){ alert("Select an employee from the list."); return; }
+    if(issueType==='ent' && !selectedEnt){ alert("Select a recipient entity from the list."); return; }
     if(!validEmail(inEmail.value.trim())){ errEmail.classList.add('show'); inEmail.focus(); return; }
     errEmail.classList.remove('show');
-    if(selItem.value===""){ alert("Select an item."); return; }
+    if(!it){ alert("Select an item from the list."); return; }
     if(!inQty.value || parseInt(inQty.value,10)<=0){ alert("Enter a quantity."); return; }
     if(!validateQty()) return;
 
-    const it=refData.items[selItem.value];
     const now=new Date();
     let recipient, dept="", empId="";
     if(issueType==='emp'){
-      const e=refData.employees[selEmp.value];
-      recipient=e.name; dept=e.dept; empId=e.id;
-    } else recipient=refData.entities[selEnt.value];
+      recipient=selectedEmp.name; dept=selectedEmp.dept; empId=selectedEmp.id;
+    } else recipient=selectedEnt;
 
     const record = {
       id: uid(),
@@ -399,9 +512,8 @@
     document.getElementById('view-form').style.display='block';
     document.getElementById('mail-note').textContent='';
     inQty.value=""; inEmail.value=""; document.getElementById('in-reason').value="";
-    selItem.value=""; outCode.value=""; stockHint.textContent="";
-    if(issueType==='emp'){ selEmp.value=""; outEmpId.value=""; outDept.value=""; }
-    else selEnt.value="";
+    comboItem.reset();
+    if(issueType==='emp') comboEmp.reset(); else comboEnt.reset();
     window.scrollTo({top:0,behavior:'smooth'});
   });
 
