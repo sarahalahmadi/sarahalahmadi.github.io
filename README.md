@@ -1,16 +1,18 @@
-[README.md](https://github.com/user-attachments/files/30633900/README.md)
-# SEVEN Madinah — Material Request System
+[README.md](https://github.com/user-attachments/files/30688911/README.md)# SEVEN Madinah — Material Request System
 
 ## Files
 
 | File | Purpose | Password |
 |---|---|---|
-| `config.js` | All settings. The only file you edit. | - |
+| `config.js` | Settings: emails and passwords. The file you edit. | - |
+| `data.js` | Employee, item and entity lists from your Excel file. | - |
 | `index.html` | Employee submits a request | No |
 | `track.html` | Employee checks their own request status | No |
 | `log.html` | Specialist, Head of Operations, General Manager | Yes |
 
-Upload all four to the root of your repository.
+Upload all five to the root of your repository.
+
+`data.js` currently holds **61 employees, 1138 items and 6 recipient entities**, read straight from the reference sheet of your workbook. You do not normally edit it by hand. Uploading a new Excel file in the Staff Portal overrides it.
 
 ---
 
@@ -68,9 +70,20 @@ If you leave the EmailJS fields blank, everything else still works. Nothing is e
 
 ---
 
-## Setup, step 3: load your data
+## Searching for names and items
 
-Sign in to `log.html` as Specialist, go to **Reference Data**, upload your Excel file. It reads the reference sheet and matches columns by header name, in Arabic or English. Uploading never affects saved requests.
+The employee, entity and item fields are type-ahead search boxes, not dropdowns. Start typing and matches appear immediately. With 61 employees and over a thousand items, nobody has to scroll.
+
+- Employees match on **name or employee ID**
+- Items match on **item name or item code**
+- Names that start with what you typed are listed first
+- Arrow keys move through results, Enter picks the highlighted one, the small x clears the field
+
+A request will not submit unless a name is actually picked from the list, so typos cannot create a mismatched record.
+
+## Updating the lists later
+
+Sign in to `log.html` as Specialist, go to **Reference Data**, upload your Excel file. It reads the reference sheet and matches columns by header name, in Arabic or English. That upload replaces what is in `data.js` for that browser, and never affects saved requests.
 
 ---
 
