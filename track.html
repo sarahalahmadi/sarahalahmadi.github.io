@@ -55,6 +55,7 @@
   .st-approved{background:var(--green-bg);color:var(--green);}
   .st-issued{background:#E9E6F5;color:#4B3B8F;}
   .st-rejected{background:var(--red-bg);color:var(--red);}
+  .st-order{background:#F3E6DA;color:#8A4B14;}
   .res-body{padding:16px 18px;}
   .drow{display:flex;justify-content:space-between;gap:14px;padding:7px 0;font-size:13px;border-bottom:1px dashed var(--line);}
   .drow:last-child{border-bottom:none;}
@@ -120,8 +121,10 @@
 
 </div>
 
+<script src="config.js"></script>
 <script>
 (function(){
+  if(!sevenRequireLogin(['employee','specialist','ops','gm'])) return;
   let requestLog = [];
   try{ const s = localStorage.getItem('seven-request-log'); if(s) requestLog = JSON.parse(s); }catch(e){}
   requestLog.forEach(r=>{
@@ -131,6 +134,13 @@
     if(!r.issued) r.issued={date:"",by:"",voucherNo:""};
   });
 
+  function stageInfo(r){
+    var m = STAGE[r.stage] || STAGE.pending_ops;
+    if(r.needsOrder && r.stage !== 'rejected' && r.stage !== 'issued'){
+      return { label: m.label + ' - Need to Order', cls: 'st-order' };
+    }
+    return m;
+  }
   const STAGE = {
     pending_ops:{label:"Pending Head of Operations", cls:"st-ops"},
     pending_gm: {label:"Pending General Manager",     cls:"st-gm"},
@@ -156,7 +166,7 @@
   }
 
   function cardHtml(r){
-    const m = STAGE[r.stage] || STAGE.pending_ops;
+    const m = stageInfo(r);
 
     // Ops step
     let opsState, opsMeta;
@@ -189,7 +199,7 @@
       </div>
       <div class="res-body">
         <div class="drow"><div class="k">Item</div><div class="v">${esc(r.itemName)}</div></div>
-        <div class="drow"><div class="k">Item Code</div><div class="v">${esc(r.itemCode)}</div></div>
+        <div class="drow"><div class="k">Item Code</div><div class="v">${r.itemCode?esc(r.itemCode):'Not in inventory'}</div></div>
         <div class="drow"><div class="k">Qty Requested</div><div class="v">${esc(r.qtyRequested)}</div></div>
         ${r.qtyApproved!=null?`<div class="drow"><div class="k">Qty Approved</div><div class="v">${esc(r.qtyApproved)}</div></div>`:''}
         <div class="drow"><div class="k">Recipient</div><div class="v">${esc(r.recipient)}${r.dept?' · '+esc(r.dept):''}</div></div>
