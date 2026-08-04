@@ -44,6 +44,14 @@
   .segmented button{flex:1;padding:11px;border:none;background:#fff;cursor:pointer;font-family:inherit;font-size:13.5px;font-weight:700;color:var(--slate);border-inline-start:1.5px solid var(--line);}
   .segmented button:first-child{border-inline-start:none;}
   .segmented button.active{background:var(--navy);color:#F3F1EA;}
+  .login-wrap{max-width:400px;margin:0 auto;}
+  .login-title{font-weight:800;font-size:17px;color:var(--navy);margin-bottom:3px;}
+  .login-sub{font-size:12.5px;color:var(--slate);margin-bottom:18px;}
+  .login-err{color:var(--red);font-size:12.5px;margin-top:10px;font-weight:700;display:none;text-align:center;}
+  .who{font-size:11.5px;color:#B9C0D6;text-align:right;}
+  .who b{color:var(--gold);display:block;font-size:13px;}
+  .who button{margin-top:6px;background:transparent;border:1px solid rgba(255,255,255,.3);color:#B9C0D6;border-radius:7px;padding:4px 10px;font-size:11px;cursor:pointer;font-family:inherit;font-weight:600;}
+  .who button:hover{background:rgba(255,255,255,.1);}
   .combo{position:relative;}
   .combo input{width:100%;padding:11px 13px;border:1.5px solid var(--line);border-radius:9px;background:#fff;font-size:14.5px;font-family:inherit;color:var(--ink);}
   .combo input:focus{outline:none;border-color:var(--teal);box-shadow:0 0 0 3px rgba(21,140,130,.15);}
@@ -105,6 +113,10 @@
       <h1>SEVEN Madinah Warehouse</h1>
       <div class="sub">Material Request</div>
     </div>
+    <div class="who" id="who-box" style="display:none;">
+      Signed in as<b id="who-label"></b>
+      <button id="btn-signout">Sign out</button>
+    </div>
   </div>
   <div class="ribbon"><span class="s1"></span><span class="s2"></span><span class="s3"></span><span class="s4"></span><span class="s5"></span></div>
 </div>
@@ -112,10 +124,30 @@
 <div class="wrap">
 <div class="top-spacer"></div>
 
+<div id="login-view">
+  <div class="login-wrap">
+    <div class="card">
+      <div class="login-title">Sign In</div>
+      <div class="login-sub">Enter your username and password to continue.</div>
+      <div class="field">
+        <label>Username</label>
+        <input type="text" id="login-user" autocomplete="username" placeholder="Username">
+      </div>
+      <div class="field">
+        <label>Password</label>
+        <input type="password" id="login-pass" autocomplete="current-password" placeholder="Password">
+      </div>
+      <button class="btn-primary" id="login-btn">Sign In</button>
+      <div class="login-err" id="login-err">Incorrect username or password.</div>
+    </div>
+  </div>
+</div>
+
+<div id="portal-view" style="display:none;">
+
 <div class="tabs no-print">
   <a class="tab active" href="index.html">New Request</a>
   <a class="tab" href="track.html">Track Request</a>
-  <a class="tab" href="log.html">Staff Portal</a>
 </div>
 
 <div id="view-form">
@@ -165,22 +197,27 @@
     <div class="field">
       <label>Item</label>
       <div class="combo">
-        <input type="text" id="sel-item" placeholder="Start typing an item name or code" autocomplete="off">
+        <input type="text" id="sel-item" placeholder="Start typing an item name, or choose Other" autocomplete="off">
         <button type="button" class="combo-clear" id="clr-item">&times;</button>
         <div class="combo-list" id="list-item"></div>
       </div>
       <div class="stock-hint" id="stock-hint"></div>
     </div>
 
+    <div class="field" id="block-custom" style="display:none;">
+      <label>Item Description</label>
+      <input type="text" id="in-custom" placeholder="Describe the item you need">
+      <div class="stock-hint">This item is not in the inventory list. It will be reviewed and ordered if approved.</div>
+    </div>
+
     <div class="row2">
       <div class="field">
         <label>Item Code</label>
-        <input type="text" id="out-code" disabled>
+        <input type="text" id="out-code" disabled placeholder="-">
       </div>
       <div class="field">
         <label>Quantity Requested</label>
         <input type="number" id="in-qty" min="1" placeholder="0">
-        <div class="err" id="err-qty">Quantity exceeds available stock.</div>
       </div>
     </div>
 
@@ -226,6 +263,8 @@
       </div>
     </div>
   </div>
+</div>
+
 </div>
 
 </div>
@@ -378,38 +417,49 @@
     });
     comboItem = makeCombo({
       inputId:'sel-item', listId:'list-item', clearId:'clr-item',
-      getData: function(){ return refData.items; },
+      getData: function(){
+        return [OTHER_ITEM].concat(refData.items);
+      },
       searchText: function(i){ return i.name + ' ' + i.code; },
       label: function(i){ return i.name; },
       renderOpt: function(i,q,hl){
-        return hl(i.name,q) + '<span class="sub">' + i.code + ' &middot; available: ' + i.available + '</span>';
+        if(i.isOther) return '<b>' + hl(i.name,q) + '</b><span class="sub">Request something not in the inventory list</span>';
+        return hl(i.name,q) + '<span class="sub">' + i.code + '</span>';
       },
       onSelect: function(i){
-        outCode.value = i.code;
-        stockHint.textContent = 'Available: ' + i.available;
-        stockHint.classList.toggle('low', i.available < 10);
-        validateQty();
+        if(i.isOther){
+          outCode.value = '';
+          customBlock.style.display = 'block';
+          stockHint.textContent = '';
+          inCustom.focus();
+        } else {
+          outCode.value = i.code;
+          customBlock.style.display = 'none';
+          inCustom.value = '';
+          stockHint.textContent = '';
+        }
       },
-      onClear: function(){ outCode.value=''; stockHint.textContent=''; errQty.classList.remove('show'); }
+      onClear: function(){
+        outCode.value='';
+        stockHint.textContent='';
+        customBlock.style.display='none';
+        inCustom.value='';
+      }
     });
   }
+
+  const OTHER_ITEM = { isOther:true, name:'Other - not in the inventory list', code:'', available:0 };
 
   const outEmpId=document.getElementById('out-empid'),
         outDept=document.getElementById('out-dept'),
         outCode=document.getElementById('out-code'),
         inQty=document.getElementById('in-qty'),
         inEmail=document.getElementById('in-email'),
+        inCustom=document.getElementById('in-custom'),
+        customBlock=document.getElementById('block-custom'),
         stockHint=document.getElementById('stock-hint'),
-        errQty=document.getElementById('err-qty'),
         errEmail=document.getElementById('err-email');
 
-  inQty.addEventListener('input', validateQty);
-  function validateQty(){
-    var it = comboItem && comboItem.get();
-    if(!it){ errQty.classList.remove('show'); return true; }
-    if(parseInt(inQty.value||"0",10) > it.available){ errQty.classList.add('show'); return false; }
-    errQty.classList.remove('show'); return true;
-  }
   const validEmail = v => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v);
 
   document.getElementById('btn-emp').addEventListener('click', ()=>setIssueType('emp'));
@@ -437,8 +487,15 @@
     if(!validEmail(inEmail.value.trim())){ errEmail.classList.add('show'); inEmail.focus(); return; }
     errEmail.classList.remove('show');
     if(!it){ alert("Select an item from the list."); return; }
+    if(it.isOther && !inCustom.value.trim()){ alert("Describe the item you need."); inCustom.focus(); return; }
     if(!inQty.value || parseInt(inQty.value,10)<=0){ alert("Enter a quantity."); return; }
-    if(!validateQty()) return;
+
+    const qtyWanted = parseInt(inQty.value,10);
+    const isCustom  = !!it.isOther;
+    const itemName  = isCustom ? inCustom.value.trim() : it.name;
+    const itemCode  = isCustom ? "" : it.code;
+    // Flag for the warehouse when stock cannot cover the request
+    const needsOrder = isCustom || qtyWanted > (it.available || 0);
 
     const now=new Date();
     let recipient, dept="", empId="";
@@ -453,8 +510,10 @@
       dateDisplay: now.toLocaleDateString('en-GB',{year:'numeric',month:'2-digit',day:'2-digit'}),
       issueType, recipient, dept, empId,
       email: inEmail.value.trim(),
-      itemName: it.name, itemCode: it.code,
-      qtyRequested: parseInt(inQty.value,10),
+      itemName: itemName, itemCode: itemCode,
+      customItem: isCustom,
+      needsOrder: needsOrder,
+      qtyRequested: qtyWanted,
       qtyApproved: null,
       reason: document.getElementById('in-reason').value.trim(),
       stage: "pending_ops",
@@ -512,8 +571,10 @@
     document.getElementById('rc-dept').textContent=r.dept||'-';
     document.getElementById('rc-email').textContent=r.email;
     document.getElementById('rc-item').textContent=r.itemName;
-    document.getElementById('rc-code').textContent=r.itemCode;
+    document.getElementById('rc-code').textContent=r.itemCode || 'Not in inventory';
     document.getElementById('rc-qty').textContent=r.qtyRequested;
+    document.querySelector('#view-receipt .status-pill').textContent =
+      r.needsOrder ? 'Pending - Need to Order' : 'Pending Head of Operations';
     document.getElementById('view-form').style.display='none';
     document.getElementById('view-receipt').style.display='block';
     window.scrollTo({top:0,behavior:'smooth'});
@@ -527,12 +588,55 @@
     document.getElementById('view-form').style.display='block';
     document.getElementById('mail-note').textContent='';
     inQty.value=""; inEmail.value=""; document.getElementById('in-reason').value="";
+    inCustom.value=""; customBlock.style.display='none';
     comboItem.reset();
     if(issueType==='emp') comboEmp.reset(); else comboEnt.reset();
     window.scrollTo({top:0,behavior:'smooth'});
   });
 
-  loadData();
+  /* ---------------- login ---------------- */
+  function showPortal(session){
+    document.getElementById('login-view').style.display='none';
+    document.getElementById('portal-view').style.display='block';
+    document.getElementById('who-box').style.display='block';
+    document.getElementById('who-label').textContent = session.label;
+    loadData();
+  }
+
+  function doLogin(){
+    var u = document.getElementById('login-user').value;
+    var p = document.getElementById('login-pass').value;
+    var res = sevenCheckLogin(u, p);
+    if(!res){
+      var e = document.getElementById('login-err');
+      e.style.display='block';
+      setTimeout(function(){ e.style.display='none'; }, 3000);
+      return;
+    }
+    sevenSetSession(res);
+    document.getElementById('login-pass').value='';
+    if(res.role === 'employee'){
+      showPortal(res);
+    } else {
+      location.href = 'log.html';
+    }
+  }
+
+  document.getElementById('login-btn').addEventListener('click', doLogin);
+  document.getElementById('login-user').addEventListener('keydown', function(e){ if(e.key==='Enter') document.getElementById('login-pass').focus(); });
+  document.getElementById('login-pass').addEventListener('keydown', function(e){ if(e.key==='Enter') doLogin(); });
+
+  document.getElementById('btn-signout').addEventListener('click', function(){
+    sevenClearSession();
+    location.reload();
+  });
+
+  var existing = sevenSession();
+  if(existing && existing.role === 'employee'){
+    showPortal(existing);
+  } else if(existing){
+    location.href = 'log.html';
+  }
 })();
 </script>
 </body>
