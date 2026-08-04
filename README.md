@@ -1,4 +1,5 @@
-[README.md](https://github.com/user-attachments/files/30688911/README.md)# SEVEN Madinah — Material Request System
+[README.md](https://github.com/user-attachments/files/30718204/README.md)
+# SEVEN Madinah — Material Request System
 
 ## Files
 
@@ -16,25 +17,33 @@ Upload all five to the root of your repository.
 
 ---
 
-## Setup, step 1: passwords and email
+## Logins
 
-Open `config.js`. Everything you need is at the top:
+The site now opens on a sign-in screen. Nobody sees anything until they log in.
+
+**Employees** share one account:
+
+| Username | Password |
+|---|---|
+| Medina | 2026 |
+
+Signing in with this takes them to the request form and the tracking page. They never see the approvals portal.
+
+**Management** each have their own account, username is their first name. Edit these in `config.js`:
 
 ```javascript
-specialistEmail: "",        // the inventory specialist's address
-
-emailjs: { publicKey:"", serviceId:"", templateId:"" },
-
-roles: {
-  specialist: { label:"Senior Inventory Specialist", password:"specialist123" },
-  ops:        { label:"Head of Operations",          password:"ops123" },
-  gm:         { label:"General Manager",             password:"gm123" }
-}
+staffLogins: [
+  { username: "murad",    password: "murad2026",    role: "specialist", label: "Senior Inventory Specialist" },
+  { username: "abdullah", password: "abdullah2026", role: "ops",        label: "Head of Operations" },
+  { username: "ahmed",    password: "ahmed2026",    role: "gm",         label: "General Manager" }
+]
 ```
 
-Change the three passwords. Put the specialist's email address in `specialistEmail`.
+Change the usernames to the real first names and set proper passwords. Keep the `role` values exactly as they are, they control who approves what.
 
----
+Signing in with a management account goes straight to the staff portal.
+
+**A word on what this login is and is not.** It keeps ordinary staff out of the approvals screen and makes the system feel like a proper internal tool. It is not real security. The credentials sit in a file the browser downloads, so anyone who views the page source can read them. That is a limitation of hosting a static site, not a bug. It is fine for a warehouse intake form. Do not reuse any password anyone uses elsewhere.
 
 ## Setup, step 2: turn on email notifications
 
@@ -69,6 +78,14 @@ The employee's email is only collected so these notifications can reach them.
 If you leave the EmailJS fields blank, everything else still works. Nothing is emailed, and the request is still saved and visible in the portal.
 
 ---
+
+## What the employee sees
+
+Employees do not see stock levels. The item list shows the name and code only, never the quantity on hand. They can request any quantity, including more than the warehouse holds, and the request goes through normally.
+
+When an employee needs something that is not in the inventory list, they pick **Other** at the top of the item list and type a description of what they need.
+
+Whenever a request cannot be filled from stock, either because the quantity exceeds what is available or because it is an Other item, the system flags it automatically. The status reads **Need to Order** all the way through the approval chain, so management can see at a glance that this one needs purchasing rather than picking from a shelf. The Excel export has a **Need To Order** column for the same reason. The flag clears once the request is issued.
 
 ## Searching for names and items
 
