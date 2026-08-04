@@ -470,21 +470,36 @@
     showReceipt(record);
 
     const note = document.getElementById('mail-note');
-    const to = SEVEN_CONFIG.specialistEmail;
-    if(!to){
-      note.textContent = "";
-      return;
-    }
-    note.textContent = "Notifying the inventory specialist...";
-    sevenSendMail(
-      to,
-      "New material request " + record.reqNo,
-      "A new material request has been submitted and is awaiting Head of Operations approval.\n\n"
+    note.textContent = "Sending confirmation...";
+
+    // 1. Email the employee a confirmation
+    var empMailOk = sevenSendMail(
+      record.email,
+      "Your material request " + record.reqNo + " has been submitted",
+      "Your material request has been submitted and is now pending Head of Operations approval.\n\n"
         + sevenRequestSummary(record)
-    ).then(ok=>{
-      note.textContent = ok
-        ? "The inventory specialist has been notified by email."
-        : "Email could not be sent automatically. The request is saved and visible in the staff portal.";
+        + "\n\nYou will receive an email when it is approved or rejected."
+    );
+
+    // 2. Email the specialist a notification
+    var specMailOk = SEVEN_CONFIG.specialistEmail
+      ? sevenSendMail(
+          SEVEN_CONFIG.specialistEmail,
+          "New material request " + record.reqNo,
+          "A new material request has been submitted and is awaiting Head of Operations approval.\n\n"
+            + sevenRequestSummary(record)
+        )
+      : Promise.resolve(false);
+
+    Promise.all([empMailOk, specMailOk]).then(function(results){
+      if(results[0] && results[1])
+        note.textContent = "Confirmation sent to your email. The inventory specialist has been notified.";
+      else if(results[0])
+        note.textContent = "Confirmation sent to your email.";
+      else if(results[1])
+        note.textContent = "The inventory specialist has been notified.";
+      else
+        note.textContent = "Email could not be sent. The request is saved and visible in the staff portal.";
     });
   });
 
