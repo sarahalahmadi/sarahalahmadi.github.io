@@ -121,10 +121,6 @@
   .track-step.current .track-label{color:var(--navy);font-weight:800;}
   .track-meta{font-size:11px;color:var(--slate);font-weight:500;}
   .modal-actions{display:flex;gap:10px;padding:16px 24px 20px;flex-wrap:wrap;}
-  .filter-bar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:14px;}
-  .chip{padding:7px 14px;border:1.5px solid var(--line);border-radius:999px;background:#fff;color:var(--slate);font-weight:700;font-size:12px;cursor:pointer;font-family:inherit;}
-  .chip:hover{background:#FCFBF6;}
-  .chip.active{background:var(--navy);color:#F3F1EA;border-color:var(--navy);}
   .toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:var(--navy);color:#F3F1EA;padding:12px 20px;border-radius:10px;font-size:13px;font-weight:600;box-shadow:0 8px 24px rgba(0,0,0,.25);z-index:200;display:none;}
   .toast.show{display:block;}
   @media print{
@@ -225,22 +221,13 @@
   <div class="pane" id="pane-archive" style="display:none;">
     <div class="card">
       <div class="section-head">
-        <div class="title">Full Archive</div>
+        <div class="title">Receipt Archive</div>
         <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
           <span class="muted" id="archive-count"></span>
-          <button class="btn-ghost" id="btn-export-archive">Export to Excel</button>
+          <button class="btn-ghost" id="btn-export-archive">Export Archive to Excel</button>
         </div>
       </div>
-      <div class="note">Every request ever submitted is kept here permanently, at every stage. Nothing is removed when a request is approved, rejected or issued. Click a request number to reopen and reprint its voucher.</div>
-      <div class="filter-bar">
-        <button class="chip active" data-filter="all">All</button>
-        <button class="chip" data-filter="pending_ops">Pending Ops</button>
-        <button class="chip" data-filter="pending_gm">Pending GM</button>
-        <button class="chip" data-filter="approved">Approved</button>
-        <button class="chip" data-filter="issued">Issued</button>
-        <button class="chip" data-filter="rejected">Rejected</button>
-        <input type="text" id="archive-search" placeholder="Search name, item, request no." style="flex:1;min-width:180px;padding:8px 12px;font-size:13px;">
-      </div>
+      <div class="note">Issued and rejected requests are kept here permanently. Click a request number to reopen and reprint its voucher.</div>
       <div class="table-scroll"><div id="archive-table"></div></div>
     </div>
   </div>
@@ -279,7 +266,7 @@
   <div class="pane" id="pane-backup" style="display:none;">
     <div class="card">
       <div class="section-head"><div class="title">Excel Records</div></div>
-      <div class="note">Exports a workbook with five sheets: <b>All Requests</b>, <b>In Progress</b>, <b>Approved</b>, <b>Rejected</b> and <b>Issued</b>. Every sheet carries the full record including both approval decisions, approver names, dates and notes.</div>
+      <div class="note">Exports a workbook with three sheets: <b>All Requests</b>, <b>Active</b>, and <b>Archive</b>, including both approval columns.</div>
       <div style="display:flex;gap:10px;flex-wrap:wrap;">
         <button class="btn-primary" id="btn-export-all">Download Full Excel Record</button>
         <button class="btn-ghost" id="btn-export-active">Active Requests Only</button>
@@ -311,45 +298,12 @@
 
 <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
 <script src="config.js"></script>
+<script src="data.js"></script>
 <script>
 (function(){
   const ROLES = SEVEN_CONFIG.roles;
 
-  const SEED_EMPLOYEES = [
-    {name:"Ahmed Alsaedi", id:"10008689", dept:"Operations"},
-    {name:"Ghaydaa Yasin", id:"10009451", dept:"Operations"},
-    {name:"Murad Al Zaher", id:"10009199", dept:"Operations"},
-    {name:"Mehmood Khan", id:"10006474", dept:"Operations"},
-    {name:"Waleed Eltawansy", id:"10008214", dept:"Operations"},
-    {name:"Vicnesvaran Rajasekharan", id:"10008492", dept:"Operations"},
-    {name:"Hisham Oghly", id:"10008405", dept:"Operations"},
-    {name:"Muwafaq Akram", id:"10008630", dept:"Operations"},
-    {name:"Fahad Saqqa", id:"10008566", dept:"Operations"},
-    {name:"Fahad Farea", id:"10008567", dept:"Operations"},
-    {name:"Faisal Al Harthi", id:"10008280", dept:"Operations"},
-    {name:"Anwar Alamer", id:"10001333", dept:"Operations"},
-    {name:"Reaan Zarea", id:"10009009", dept:"Operations"}
-  ];
-  const SEED_ITEMS = [
-    {name:"Tyvek Wristband QR+Serial 1-Time Use", code:"1200000659", available:395000},
-    {name:"Super General 3-Tap Water Dispenser", code:"1800000167", available:6},
-    {name:"Screen", code:"ITM-005", available:166},
-    {name:"Laptop", code:"ITM-004", available:140},
-    {name:"Safety Helmet", code:"ITM-001", available:117},
-    {name:"Vest", code:"ITM-002", available:117},
-    {name:"Shoes", code:"ITM-003", available:121},
-    {name:"Headphone", code:"ITM-006", available:158},
-    {name:"Mouse", code:"ITM-007", available:159},
-    {name:"Keyboard", code:"ITM-008", available:160},
-    {name:"Docking Station", code:"ITM-009", available:177},
-    {name:"Cam", code:"ITM-010", available:177},
-    {name:"Locker", code:"ITM-011", available:146},
-    {name:"Welcome Kit", code:"ITM-012", available:138},
-    {name:"PLATFORM TROLLEY-150KG", code:"1800000646", available:6}
-  ];
-  const SEED_ENTITIES = ["Workshop","Ahmed office","management 1","management 2","Male break room","Female break room"];
-
-  let refData = { employees:SEED_EMPLOYEES, items:SEED_ITEMS, entities:SEED_ENTITIES };
+  let refData = { employees:SEVEN_DATA.employees.slice(), items:SEVEN_DATA.items.slice(), entities:SEVEN_DATA.entities.slice() };
   let requestLog = [];
   let currentRole = null;
   let selectedRole = null;
@@ -513,36 +467,12 @@
     el.innerHTML=tableHtml(rows,'');
   }
 
-  let archiveFilter='all';
-  let archiveQuery='';
-
-  function archiveList(){
-    let list=requestLog.slice();
-    if(archiveFilter!=='all') list=list.filter(r=>r.stage===archiveFilter);
-    if(archiveQuery){
-      const q=archiveQuery.toLowerCase();
-      list=list.filter(r=>
-        (r.reqNo||'').toLowerCase().indexOf(q)!==-1 ||
-        (r.recipient||'').toLowerCase().indexOf(q)!==-1 ||
-        (r.itemName||'').toLowerCase().indexOf(q)!==-1 ||
-        (r.itemCode||'').toLowerCase().indexOf(q)!==-1 ||
-        (r.email||'').toLowerCase().indexOf(q)!==-1 ||
-        (r.dept||'').toLowerCase().indexOf(q)!==-1
-      );
-    }
-    return list;
-  }
-
   function renderArchive(){
-    const list=archiveList();
-    document.getElementById('cnt-archive').textContent=requestLog.length;
-    document.getElementById('archive-count').textContent =
-      (archiveFilter==='all' && !archiveQuery)
-        ? requestLog.length+' records on file'
-        : list.length+' of '+requestLog.length+' shown';
+    const list=requestLog.filter(r=>['issued','rejected'].indexOf(r.stage)!==-1);
+    document.getElementById('cnt-archive').textContent=list.length;
+    document.getElementById('archive-count').textContent=list.length+' archived';
     const el=document.getElementById('archive-table');
-    if(!requestLog.length){ el.innerHTML='<div class="empty">No requests on file yet.</div>'; return; }
-    if(!list.length){ el.innerHTML='<div class="empty">No records match this filter.</div>'; return; }
+    if(!list.length){ el.innerHTML='<div class="empty">Nothing archived yet.</div>'; return; }
     const rows=list.slice().reverse().map(r=>{
       let acts='<button class="btn-ghost" style="padding:5px 11px;font-size:11.5px;" onclick="openVoucher(\''+r.id+'\')">Voucher</button>';
       if(currentRole==='specialist') acts+=' <button class="btn-remove" onclick="deleteRequest(\''+r.id+'\')">Remove</button>';
@@ -550,19 +480,6 @@
     }).join('');
     el.innerHTML=tableHtml(rows,'Receipt');
   }
-
-  document.querySelectorAll('.chip[data-filter]').forEach(c=>{
-    c.addEventListener('click', ()=>{
-      document.querySelectorAll('.chip[data-filter]').forEach(x=>x.classList.remove('active'));
-      c.classList.add('active');
-      archiveFilter=c.dataset.filter;
-      renderArchive();
-    });
-  });
-  document.getElementById('archive-search').addEventListener('input', e=>{
-    archiveQuery=e.target.value.trim();
-    renderArchive();
-  });
 
   /* ---------- approvals with email ---------- */
   function mailEmployee(r, subject, intro){
@@ -733,10 +650,8 @@
     if(!requestLog.length){ alert("No requests to export."); return; }
     downloadWorkbook([
       ["All Requests", requestLog],
-      ["In Progress", requestLog.filter(r=>['issued','rejected'].indexOf(r.stage)===-1)],
-      ["Approved",    requestLog.filter(r=>['approved','issued'].indexOf(r.stage)!==-1)],
-      ["Rejected",    requestLog.filter(r=>r.stage==='rejected')],
-      ["Issued",      requestLog.filter(r=>r.stage==='issued')]
+      ["Active", requestLog.filter(r=>['issued','rejected'].indexOf(r.stage)===-1)],
+      ["Archive", requestLog.filter(r=>['issued','rejected'].indexOf(r.stage)!==-1)]
     ], "SEVEN_Madinah_Material_Requests");
   });
   document.getElementById('btn-export-active').addEventListener('click', ()=>{
@@ -745,11 +660,9 @@
     downloadWorkbook([["Active", list]], "SEVEN_Madinah_Active_Requests");
   });
   document.getElementById('btn-export-archive').addEventListener('click', ()=>{
-    if(!requestLog.length){ alert("No records to export."); return; }
-    const shown=archiveList();
-    const sheets=[["All Records", requestLog]];
-    if(shown.length!==requestLog.length) sheets.push(["Current View", shown]);
-    downloadWorkbook(sheets, "SEVEN_Madinah_Archive");
+    const list=requestLog.filter(r=>['issued','rejected'].indexOf(r.stage)!==-1);
+    if(!list.length){ alert("Archive is empty."); return; }
+    downloadWorkbook([["Archive", list]], "SEVEN_Madinah_Request_Archive");
   });
 
   /* ---------- backup ---------- */
