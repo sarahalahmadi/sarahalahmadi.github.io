@@ -1,4 +1,4 @@
-[README.md](https://github.com/user-attachments/files/30945420/README.md)
+[README.md](https://github.com/user-attachments/files/30945767/README.md)
 # SEVEN Madinah — Material Request System
 
 ## Files
@@ -25,7 +25,7 @@ The site now opens on a sign-in screen. Nobody sees anything until they log in.
 
 | Username | Password |
 |---|---|
-| Medina | 2026 |
+| seven | 2026 |
 
 Signing in with this takes them to the request form and the tracking page. They never see the approvals portal.
 
@@ -33,9 +33,9 @@ Signing in with this takes them to the request form and the tracking page. They 
 
 ```javascript
 staffLogins: [
-  { username: "murad",    password: "murad2026",    role: "specialist", label: "Senior Inventory Specialist" },
-  { username: "abdullah", password: "abdullah2026", role: "ops",        label: "Head of Operations" },
-  { username: "ahmed",    password: "ahmed2026",    role: "gm",         label: "General Manager" }
+  { username: "murad",    password: "2026", role: "specialist", label: "Senior Inventory Specialist" },
+  { username: "abdullah", password: "2026", role: "ops",        label: "Head of Operations" },
+  { username: "ahmed",    password: "2026", role: "gm",         label: "General Manager" }
 ]
 ```
 
