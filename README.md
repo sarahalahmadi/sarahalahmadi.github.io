@@ -1,4 +1,4 @@
-[README.md](https://github.com/user-attachments/files/30718204/README.md)
+[README.md](https://github.com/user-attachments/files/30945420/README.md)
 # SEVEN Madinah — Material Request System
 
 ## Files
@@ -145,3 +145,36 @@ This works well if the warehouse uses one shared computer. If requests come from
 ---
 
 *SEVEN Madinah Complex, Warehouse Operations*
+
+
+---
+
+## New: Suppliers, Locations, Reports, Audit Log
+
+Four new tabs in the staff portal, specialist only.
+
+**Suppliers** — a contact list: name, contact person, phone, notes. Not linked to specific items, just a reference sheet for who you order from.
+
+**Locations** — physical storage areas: a code (e.g. A-01), a name, and notes. A simple reference list for where things are kept.
+
+**Reports** — four live tables computed from your actual data:
+- Stock under 10 units, sorted lowest first
+- Most requested items, by total quantity across all requests
+- Requests per month
+- Requests per department or entity
+
+**Audit Log** — every sign-in, request submission, approval, rejection, deletion, and reference-data change is recorded automatically, with who did it, their role, and when. Not editable from inside the app. Exports to Excel from the tab itself.
+
+All four store their data in the same browser local storage as everything else, so the same per-device limitation applies: a supplier added on one computer will not show up on another until that device also has it entered.
+
+### What this does not include yet
+
+A few things from the local system you shared are real architectural changes, not additions to this one, and need their own dedicated build:
+
+- **Encrypted logins** (PBKDF2 + AES-GCM) in place of the current config.js passwords
+- **Shared OneDrive-folder sync**, which is the actual fix for the multi-device problem
+- **Employee offboarding / clearance tracking** against custody
+- **Purchase-order matching** against receipts
+- **Arabic item-name translation layer**
+
+Say the word on any of these and I'll scope and build it next.
