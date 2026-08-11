@@ -525,6 +525,7 @@
 
     requestLog.push(record);
     saveLog();
+    sevenAudit('request_submitted', record.reqNo + ' - ' + record.itemName + ' x' + record.qtyRequested);
     lastRecord = record;
     showReceipt(record);
 
@@ -615,6 +616,7 @@
     }
     sevenSetSession(res);
     document.getElementById('login-pass').value='';
+    sevenAudit('login', res.role);
     if(res.role === 'employee'){
       showPortal(res);
     } else {
