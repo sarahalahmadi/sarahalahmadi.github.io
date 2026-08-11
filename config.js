@@ -75,6 +75,22 @@ function sevenRequireLogin(allowedRoles){
   return s;
 }
 
+function sevenAudit(action, details){
+  try{
+    var log = JSON.parse(localStorage.getItem('seven-audit-log') || '[]');
+    var s = sevenSession();
+    log.push({
+      ts: new Date().toISOString(),
+      by: (s && s.name) || 'unknown',
+      role: (s && s.role) || '',
+      action: action,
+      details: details || ''
+    });
+    if(log.length > 3000) log = log.slice(log.length - 3000);
+    localStorage.setItem('seven-audit-log', JSON.stringify(log));
+  }catch(e){ /* audit logging must never block the real action */ }
+}
+
 function sevenSendMail(toEmail, subject, message){
   var cfg = SEVEN_CONFIG.emailjs;
   if(!toEmail) return Promise.resolve(false);
