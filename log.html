@@ -159,6 +159,10 @@
     <div class="tab active" data-view="inbox">Approvals <span class="count" id="cnt-inbox">0</span></div>
     <div class="tab" data-view="active">Active <span class="count" id="cnt-active">0</span></div>
     <div class="tab" data-view="archive">Archive <span class="count" id="cnt-archive">0</span></div>
+    <div class="tab" data-view="suppliers">Suppliers</div>
+    <div class="tab" data-view="locations">Locations</div>
+    <div class="tab" data-view="reports">Reports</div>
+    <div class="tab" data-view="audit">Audit Log</div>
     <div class="tab" data-view="data">Reference Data</div>
     <div class="tab" data-view="backup">Export and Backup</div>
   </div>
@@ -196,6 +200,81 @@
       </div>
       <div class="note">Issued and rejected requests are kept here permanently. Click a request number to reopen and reprint its voucher.</div>
       <div class="table-scroll"><div id="archive-table"></div></div>
+    </div>
+  </div>
+
+  <!-- Suppliers -->
+  <div class="pane" id="pane-suppliers" style="display:none;">
+    <div class="card">
+      <div class="section-head">
+        <div class="title">Suppliers</div>
+        <span class="muted" id="supplier-count"></span>
+      </div>
+      <div class="note">Contact list for the vendors you order from. Not linked to any specific item, just a reference sheet.</div>
+      <div style="display:grid;grid-template-columns:1.4fr 1fr 1fr 1.4fr auto;gap:10px;margin-bottom:16px;">
+        <input type="text" id="sup-name" placeholder="Supplier name">
+        <input type="text" id="sup-contact" placeholder="Contact person">
+        <input type="text" id="sup-phone" placeholder="Phone">
+        <input type="text" id="sup-notes" placeholder="Notes (items supplied, terms...)">
+        <button class="btn-primary" id="btn-add-supplier">Add</button>
+      </div>
+      <div class="table-scroll"><div id="supplier-table"></div></div>
+    </div>
+  </div>
+
+  <!-- Locations -->
+  <div class="pane" id="pane-locations" style="display:none;">
+    <div class="card">
+      <div class="section-head">
+        <div class="title">Storage Locations</div>
+        <span class="muted" id="location-count"></span>
+      </div>
+      <div class="note">Physical areas in the warehouse - shelves, zones, rooms. Useful for noting where an item type is kept.</div>
+      <div style="display:grid;grid-template-columns:1fr 1.4fr 1fr auto;gap:10px;margin-bottom:16px;">
+        <input type="text" id="loc-code" placeholder="Code (e.g. A-01)">
+        <input type="text" id="loc-name" placeholder="Location name">
+        <input type="text" id="loc-notes" placeholder="Notes">
+        <button class="btn-primary" id="btn-add-location">Add</button>
+      </div>
+      <div class="table-scroll"><div id="location-table"></div></div>
+    </div>
+  </div>
+
+  <!-- Reports -->
+  <div class="pane" id="pane-reports" style="display:none;">
+    <div class="card">
+      <div class="section-head">
+        <div class="title">Stock Needing Reorder</div>
+        <span class="muted">Available balance under 10</span>
+      </div>
+      <div class="table-scroll"><div id="reorder-table"></div></div>
+    </div>
+    <div class="card">
+      <div class="section-head"><div class="title">Most Requested Items</div></div>
+      <div class="table-scroll"><div id="top-items-table"></div></div>
+    </div>
+    <div class="card">
+      <div class="section-head"><div class="title">Requests by Month</div></div>
+      <div class="table-scroll"><div id="monthly-table"></div></div>
+    </div>
+    <div class="card">
+      <div class="section-head"><div class="title">Requests by Department</div></div>
+      <div class="table-scroll"><div id="dept-table"></div></div>
+    </div>
+  </div>
+
+  <!-- Audit Log -->
+  <div class="pane" id="pane-audit" style="display:none;">
+    <div class="card">
+      <div class="section-head">
+        <div class="title">Audit Log</div>
+        <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+          <span class="muted" id="audit-count"></span>
+          <button class="btn-ghost" id="btn-export-audit">Export to Excel</button>
+        </div>
+      </div>
+      <div class="note">Every sign-in, request submission, approval, rejection, and reference-data change is recorded here automatically. This log is not editable from inside the app.</div>
+      <div class="table-scroll"><div id="audit-table"></div></div>
     </div>
   </div>
 
@@ -272,6 +351,8 @@
   let refData = { employees:SEVEN_DATA.employees.slice(), items:SEVEN_DATA.items.slice(), entities:SEVEN_DATA.entities.slice() };
   let requestLog = [];
   let currentRole = null;
+  let suppliers = [];
+  let locations = [];
 
   const STAGE_META = {
     pending_ops:{label:"Pending Head of Operations", cls:"st-ops"},
@@ -335,6 +416,8 @@
       var v = t.dataset.view;
       t.style.display = (restricted && (v==='data'||v==='backup')) ? 'none':'flex';
     });
+    loadSuppliers(); renderSuppliers();
+    loadLocations(); renderLocations();
     loadData();
     switchView('inbox');
   })();
@@ -344,9 +427,11 @@
   });
   function switchView(v){
     document.querySelectorAll('.tab[data-view]').forEach(t=>t.classList.toggle('active', t.dataset.view===v));
-    ['inbox','active','archive','data','backup'].forEach(p=>{
+    ['inbox','active','archive','data','backup','suppliers','locations','reports','audit'].forEach(p=>{
       document.getElementById('pane-'+p).style.display = (p===v)?'block':'none';
     });
+    if(v==='reports') renderReports();
+    if(v==='audit') renderAudit();
   }
 
   /* ---------- render ---------- */
@@ -453,6 +538,7 @@
       slot.decision='rejected'; slot.by=name; slot.date=now; slot.note=note.trim();
       r.stage='rejected';
       saveLog(); renderAll();
+      sevenAudit('request_rejected', r.reqNo + ' by ' + name + (note.trim()?' - '+note.trim():''));
       mailEmployee(r, "Material request "+r.reqNo+" was not approved",
         "Your material request was not approved by the "+roleLabel+" ("+name+") on "+now+"."
         + (note.trim() ? "\n\nReason: "+note.trim() : ""));
@@ -470,6 +556,7 @@
     slot.decision='approved'; slot.by=name; slot.date=now; slot.note="";
     r.stage = currentRole==='ops' ? 'pending_gm' : 'approved';
     saveLog(); renderAll();
+    sevenAudit('request_approved', r.reqNo + ' by ' + name + ' (' + (currentRole==='ops'?'Head of Operations':'General Manager') + ')');
 
     if(currentRole==='ops'){
       mailEmployee(r, "Material request "+r.reqNo+" approved by Head of Operations",
@@ -499,6 +586,7 @@
     const it=r.itemCode ? refData.items.find(i=>i.code===r.itemCode) : null;
     if(it){ it.available=Math.max(0, it.available-(r.qtyApproved!=null?r.qtyApproved:r.qtyRequested)); saveRefData(); }
     saveLog(); renderAll();
+    sevenAudit('request_issued', r.reqNo + ' by ' + who.trim());
     mailEmployee(r, "Material request "+r.reqNo+" has been issued",
       "Your material request has been issued by "+who.trim()+" on "+now
       + (vno.trim() ? "\nVoucher number: "+vno.trim() : ""));
@@ -507,8 +595,10 @@
   window.deleteRequest = function(id){
     if(currentRole!=='specialist') return;
     if(!confirm("Remove this request permanently? Export a backup first if you need the record.")) return;
+    const r = requestLog.find(x=>x.id===id);
     requestLog=requestLog.filter(r=>r.id!==id);
     saveLog(); renderAll();
+    sevenAudit('request_deleted', r ? r.reqNo : id);
   };
 
   /* ---------- voucher ---------- */
@@ -660,7 +750,168 @@
     if(!requestLog.length) return;
     if(!confirm("Delete all "+requestLog.length+" requests including the archive? This cannot be undone.")) return;
     if(!confirm("Have you downloaded a backup? Click OK only if yes.")) return;
+    const countBefore = requestLog.length;
     requestLog=[]; saveLog(); renderAll();
+    sevenAudit('all_requests_cleared', countBefore + ' requests removed');
+  });
+
+  /* ---------- suppliers ---------- */
+  function loadSuppliers(){
+    try{ var s = localStorage.getItem('seven-suppliers'); suppliers = s ? JSON.parse(s) : []; }
+    catch(e){ suppliers = []; }
+  }
+  function saveSuppliers(){
+    try{ localStorage.setItem('seven-suppliers', JSON.stringify(suppliers)); }
+    catch(e){ alert('Could not save suppliers.'); }
+  }
+  function renderSuppliers(){
+    document.getElementById('supplier-count').textContent = suppliers.length + ' supplier' + (suppliers.length===1?'':'s');
+    const el = document.getElementById('supplier-table');
+    if(!suppliers.length){ el.innerHTML = '<div class="empty">No suppliers added yet.</div>'; return; }
+    const rows = suppliers.slice().reverse().map(s => '<tr>'+
+      '<td>'+esc(s.name)+'</td><td>'+esc(s.contact)+'</td><td>'+esc(s.phone)+'</td><td>'+esc(s.notes)+'</td>'+
+      '<td class="no-print"><button class="btn-remove" onclick="deleteSupplier(\''+s.id+'\')">Remove</button></td></tr>').join('');
+    el.innerHTML = '<table><tr><th>Supplier</th><th>Contact</th><th>Phone</th><th>Notes</th><th class="no-print"></th></tr>'+rows+'</table>';
+  }
+  document.getElementById('btn-add-supplier').addEventListener('click', ()=>{
+    const name = document.getElementById('sup-name').value.trim();
+    if(!name){ alert('Enter a supplier name.'); return; }
+    const s = {
+      id: 's'+Date.now().toString(36),
+      name, contact: document.getElementById('sup-contact').value.trim(),
+      phone: document.getElementById('sup-phone').value.trim(),
+      notes: document.getElementById('sup-notes').value.trim()
+    };
+    suppliers.push(s); saveSuppliers(); renderSuppliers();
+    sevenAudit('supplier_added', name);
+    ['sup-name','sup-contact','sup-phone','sup-notes'].forEach(id=>document.getElementById(id).value='');
+  });
+  window.deleteSupplier = function(id){
+    const s = suppliers.find(x=>x.id===id);
+    if(!confirm('Remove this supplier?')) return;
+    suppliers = suppliers.filter(x=>x.id!==id); saveSuppliers(); renderSuppliers();
+    sevenAudit('supplier_removed', s ? s.name : id);
+  };
+
+  /* ---------- locations ---------- */
+  function loadLocations(){
+    try{ var s = localStorage.getItem('seven-locations'); locations = s ? JSON.parse(s) : []; }
+    catch(e){ locations = []; }
+  }
+  function saveLocations(){
+    try{ localStorage.setItem('seven-locations', JSON.stringify(locations)); }
+    catch(e){ alert('Could not save locations.'); }
+  }
+  function renderLocations(){
+    document.getElementById('location-count').textContent = locations.length + ' location' + (locations.length===1?'':'s');
+    const el = document.getElementById('location-table');
+    if(!locations.length){ el.innerHTML = '<div class="empty">No locations added yet.</div>'; return; }
+    const rows = locations.slice().reverse().map(l => '<tr>'+
+      '<td style="font-family:\'JetBrains Mono\',monospace;">'+esc(l.code)+'</td><td>'+esc(l.name)+'</td><td>'+esc(l.notes)+'</td>'+
+      '<td class="no-print"><button class="btn-remove" onclick="deleteLocation(\''+l.id+'\')">Remove</button></td></tr>').join('');
+    el.innerHTML = '<table><tr><th>Code</th><th>Location</th><th>Notes</th><th class="no-print"></th></tr>'+rows+'</table>';
+  }
+  document.getElementById('btn-add-location').addEventListener('click', ()=>{
+    const name = document.getElementById('loc-name').value.trim();
+    if(!name){ alert('Enter a location name.'); return; }
+    const l = {
+      id: 'l'+Date.now().toString(36),
+      code: document.getElementById('loc-code').value.trim(),
+      name, notes: document.getElementById('loc-notes').value.trim()
+    };
+    locations.push(l); saveLocations(); renderLocations();
+    sevenAudit('location_added', name);
+    ['loc-code','loc-name','loc-notes'].forEach(id=>document.getElementById(id).value='');
+  });
+  window.deleteLocation = function(id){
+    const l = locations.find(x=>x.id===id);
+    if(!confirm('Remove this location?')) return;
+    locations = locations.filter(x=>x.id!==id); saveLocations(); renderLocations();
+    sevenAudit('location_removed', l ? l.name : id);
+  };
+
+  /* ---------- reports ---------- */
+  function renderReports(){
+    // Reorder
+    const low = refData.items.filter(i => i.available < 10).sort((a,b)=>a.available-b.available);
+    const rEl = document.getElementById('reorder-table');
+    if(!low.length){ rEl.innerHTML = '<div class="empty">Nothing under the 10-unit threshold right now.</div>'; }
+    else {
+      const rows = low.slice(0,100).map(i=>'<tr><td>'+esc(i.name)+'</td><td>'+esc(i.code)+'</td><td>'+esc(i.available)+'</td></tr>').join('');
+      rEl.innerHTML = '<table><tr><th>Item</th><th>Code</th><th>Available</th></tr>'+rows+'</table>';
+    }
+
+    // Most requested items
+    const counts = {};
+    requestLog.forEach(r=>{ counts[r.itemName] = (counts[r.itemName]||0) + r.qtyRequested; });
+    const topItems = Object.keys(counts).map(k=>({name:k, qty:counts[k]})).sort((a,b)=>b.qty-a.qty).slice(0,20);
+    const tEl = document.getElementById('top-items-table');
+    if(!topItems.length){ tEl.innerHTML = '<div class="empty">No requests yet.</div>'; }
+    else {
+      const rows = topItems.map(i=>'<tr><td>'+esc(i.name)+'</td><td>'+esc(i.qty)+'</td></tr>').join('');
+      tEl.innerHTML = '<table><tr><th>Item</th><th>Total Qty Requested</th></tr>'+rows+'</table>';
+    }
+
+    // By month
+    const months = {};
+    requestLog.forEach(r=>{
+      const m = (r.dateISO||'').slice(0,7);
+      if(!m) return;
+      months[m] = (months[m]||0) + 1;
+    });
+    const mKeys = Object.keys(months).sort();
+    const mEl = document.getElementById('monthly-table');
+    if(!mKeys.length){ mEl.innerHTML = '<div class="empty">No requests yet.</div>'; }
+    else {
+      const rows = mKeys.map(k=>'<tr><td>'+k+'</td><td>'+months[k]+'</td></tr>').join('');
+      mEl.innerHTML = '<table><tr><th>Month</th><th>Requests</th></tr>'+rows+'</table>';
+    }
+
+    // By department
+    const depts = {};
+    requestLog.forEach(r=>{
+      const d = r.dept || (r.issueType==='ent' ? r.recipient : 'Unspecified');
+      depts[d] = (depts[d]||0) + 1;
+    });
+    const dEl = document.getElementById('dept-table');
+    const dKeys = Object.keys(depts).sort((a,b)=>depts[b]-depts[a]);
+    if(!dKeys.length){ dEl.innerHTML = '<div class="empty">No requests yet.</div>'; }
+    else {
+      const rows = dKeys.map(k=>'<tr><td>'+esc(k)+'</td><td>'+depts[k]+'</td></tr>').join('');
+      dEl.innerHTML = '<table><tr><th>Department / Entity</th><th>Requests</th></tr>'+rows+'</table>';
+    }
+  }
+
+  /* ---------- audit log ---------- */
+  function loadAudit(){
+    try{ return JSON.parse(localStorage.getItem('seven-audit-log') || '[]'); }
+    catch(e){ return []; }
+  }
+  function renderAudit(){
+    const log = loadAudit().slice().reverse();
+    document.getElementById('audit-count').textContent = log.length + ' entries';
+    const el = document.getElementById('audit-table');
+    if(!log.length){ el.innerHTML = '<div class="empty">Nothing recorded yet.</div>'; return; }
+    const rows = log.slice(0,500).map(e=>{
+      const t = new Date(e.ts).toLocaleString('en-GB');
+      return '<tr><td>'+esc(t)+'</td><td>'+esc(e.by)+'</td><td>'+esc(e.role)+'</td><td>'+esc(e.action)+'</td><td>'+esc(e.details)+'</td></tr>';
+    }).join('');
+    el.innerHTML = '<table><tr><th>Time</th><th>By</th><th>Role</th><th>Action</th><th>Details</th></tr>'+rows+'</table>'
+      + (log.length>500 ? '<div class="muted" style="padding:10px;">Showing the most recent 500 of '+log.length+' entries. Use Export to Excel for the full log.</div>' : '');
+  }
+  document.getElementById('btn-export-audit').addEventListener('click', ()=>{
+    const log = loadAudit();
+    if(!log.length){ alert('Nothing to export yet.'); return; }
+    const rows = log.map(e=>({
+      "Time": new Date(e.ts).toLocaleString('en-GB'),
+      "By": e.by, "Role": e.role, "Action": e.action, "Details": e.details
+    }));
+    const wb = XLSX.utils.book_new();
+    const ws = XLSX.utils.json_to_sheet(rows);
+    ws['!cols'] = [{wch:20},{wch:16},{wch:14},{wch:22},{wch:40}];
+    XLSX.utils.book_append_sheet(wb, ws, 'Audit Log');
+    const d = new Date();
+    XLSX.writeFile(wb, 'SEVEN_Madinah_Audit_Log_'+d.getFullYear()+String(d.getMonth()+1).padStart(2,'0')+String(d.getDate()).padStart(2,'0')+'.xlsx');
   });
 
   /* ---------- reference data ---------- */
@@ -732,6 +983,7 @@
         saveRefData(); renderDataSummary();
         statusEl.textContent="Loaded "+employees.length+" employees, "+items.length+" items, "+entList.length+" entities.";
         statusEl.className="upload-status ok";
+        sevenAudit('reference_data_updated', 'Excel upload: ' + sheetName);
       }catch(err){
         console.error(err);
         statusEl.textContent="Could not read that file.";
@@ -757,6 +1009,7 @@
     saveRefData(); renderDataSummary();
     document.getElementById('imp-emp').value=''; document.getElementById('imp-item').value=''; document.getElementById('imp-ent').value='';
     toast("Reference data saved.");
+    sevenAudit('reference_data_updated', 'Manual paste');
   });
 
 })();
