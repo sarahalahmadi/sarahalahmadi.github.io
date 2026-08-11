@@ -412,9 +412,10 @@
 
   (function applyRole(){
     var restricted = (currentRole !== 'specialist');
+    var specialistOnly = ['active','archive','suppliers','locations','reports','audit','data','backup'];
     document.querySelectorAll('.tab[data-view]').forEach(function(t){
       var v = t.dataset.view;
-      t.style.display = (restricted && (v==='data'||v==='backup')) ? 'none':'flex';
+      t.style.display = (restricted && specialistOnly.indexOf(v) !== -1) ? 'none' : 'flex';
     });
     loadSuppliers(); renderSuppliers();
     loadLocations(); renderLocations();
