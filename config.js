@@ -19,18 +19,18 @@ const SEVEN_CONFIG = {
      Everyone in the warehouse uses this one account to
      submit and track requests.                                */
   employeeLogin: {
-    username: "Medina",
+    username: "seven",
     password: "2026"
   },
 
   /* --- 4. Management accounts ---------------------------------
      Username is the person's first name.
-     CHANGE THE NAMES AND PASSWORDS to the real people.
+     CHANGE THE NAMES to the real people.
      role must stay as specialist / ops / gm.                  */
   staffLogins: [
-    { username: "murad",    password: "murad2026",    role: "specialist", label: "Senior Inventory Specialist" },
-    { username: "abdullah", password: "abdullah2026", role: "ops",        label: "Head of Operations" },
-    { username: "ahmed",    password: "ahmed2026",    role: "gm",         label: "General Manager" }
+    { username: "murad",    password: "2026", role: "specialist", label: "Senior Inventory Specialist" },
+    { username: "abdullah", password: "2026", role: "ops",        label: "Head of Operations" },
+    { username: "ahmed",    password: "2026", role: "gm",         label: "General Manager" }
   ]
 };
 
